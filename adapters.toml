@@ -1,0 +1,27 @@
+[[adapters]]
+name = "adapter-elgato-lights"
+display_name = "Elgato Key Light"
+description = "Control Elgato Key Light and Key Light Air devices over the local network."
+path = "adapter-elgato-lights"
+version = "0.1.0"
+
+[[adapters]]
+name = "adapter-ollama"
+display_name = "Ollama"
+description = "Service-style Lua access to a local Ollama LLM instance."
+path = "adapter-ollama"
+version = "0.1.0"
+
+[[adapters]]
+name = "adapter-roku-tv"
+display_name = "Roku TV"
+description = "Power control for a Roku TV via the ECP HTTP API."
+path = "adapter-roku-tv"
+version = "0.1.0"
+
+[[adapters]]
+name = "adapter-zigbee2mqtt"
+display_name = "Zigbee2MQTT"
+description = "MQTT-backed adapter for Zigbee devices via Zigbee2MQTT."
+path = "adapter-zigbee2mqtt"
+version = "0.1.0"
