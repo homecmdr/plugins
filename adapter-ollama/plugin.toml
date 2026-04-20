@@ -1,0 +1,20 @@
+[config]
+block = "adapters.ollama"
+
+[[config.fields]]
+key = "enabled"
+type = "bool"
+description = "Enable or disable this plugin"
+default = "true"
+
+[[config.fields]]
+key = "model"
+type = "string"
+description = "Default Ollama model to use (e.g. llama3, mistral, phi3)"
+required = true
+
+[[config.fields]]
+key = "base_url"
+type = "string"
+description = "URL of the Ollama server"
+default = "http://127.0.0.1:11434"

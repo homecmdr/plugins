@@ -1,0 +1,20 @@
+[config]
+block = "adapters.roku_tv"
+
+[[config.fields]]
+key = "enabled"
+type = "bool"
+description = "Enable or disable this plugin"
+default = "true"
+
+[[config.fields]]
+key = "ip_address"
+type = "string"
+description = "Local IP address of the Roku TV (e.g. 192.168.1.100) — assign a static IP in your router"
+required = true
+
+[[config.fields]]
+key = "poll_interval_secs"
+type = "u64"
+description = "How often to poll the TV for state changes (seconds, minimum 1)"
+default = "30"
