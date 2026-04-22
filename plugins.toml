@@ -12,6 +12,13 @@
 #   version      — semver string
 
 [[plugins]]
+name         = "plugin-open-meteo"
+path         = "plugin-open-meteo"
+display_name = "Open-Meteo Weather"
+description  = "Polls Open-Meteo for current weather conditions (temperature, wind, humidity, UV index, and more). No API key required."
+version      = "0.1.0"
+
+[[plugins]]
 name         = "plugin-elgato-lights"
 path         = "plugin-elgato-lights"
 display_name = "Elgato Key Light"

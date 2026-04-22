@@ -1,0 +1,8 @@
+[plugin]
+name        = "open_meteo"
+version     = "0.1.0"
+description = "Open-Meteo weather adapter (WASM)"
+api_version = "0.1.0"
+
+[runtime]
+poll_interval_secs = 300
