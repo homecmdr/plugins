@@ -130,7 +130,7 @@ impl Guest for RokuTvPlugin {
         let active_app_id = xml_attr(&active_app_xml, "app", "id").unwrap_or_default();
 
         let attrs = serde_json::json!({
-            "power":                          power_on,
+            "power":                          if power_on { "on" } else { "off" },
             "custom.roku_tv.model_name":      model_name,
             "custom.roku_tv.friendly_name":   friendly_name,
             "custom.roku_tv.serial_number":   serial,
