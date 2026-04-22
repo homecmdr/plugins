@@ -1,0 +1,117 @@
+name: Build WASM plugins
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "plugin-*/src/**"
+      - "plugin-*/Cargo.toml"
+      - "plugin-*/Cargo.lock"
+      - "plugin-*/wit/**"
+      - ".github/workflows/build-plugins.yml"
+  pull_request:
+    paths:
+      - "plugin-*/src/**"
+      - "plugin-*/Cargo.toml"
+      - "plugin-*/Cargo.lock"
+      - "plugin-*/wit/**"
+      - ".github/workflows/build-plugins.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build ${{ matrix.plugin }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - plugin: plugin-elgato-lights
+            wasm_name: elgato_lights
+            crate_name: plugin_elgato_lights_wasm
+          - plugin: plugin-ollama
+            wasm_name: ollama
+            crate_name: plugin_ollama_wasm
+          - plugin: plugin-roku-tv
+            wasm_name: roku_tv
+            crate_name: plugin_roku_tv_wasm
+          - plugin: plugin-zigbee2mqtt
+            wasm_name: zigbee2mqtt
+            crate_name: plugin_zigbee2mqtt_wasm
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip2
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ matrix.plugin }}-${{ hashFiles(format('{0}/Cargo.lock', matrix.plugin)) }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ matrix.plugin }}-
+
+      - name: Build ${{ matrix.plugin }}
+        working-directory: ${{ matrix.plugin }}
+        run: cargo build --release
+
+      - name: Copy binary to repo root of plugin directory
+        run: |
+          cp ${{ matrix.plugin }}/target/wasm32-wasip2/release/${{ matrix.crate_name }}.wasm \
+             ${{ matrix.plugin }}/${{ matrix.wasm_name }}.wasm
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.wasm_name }}.wasm
+          path: ${{ matrix.plugin }}/${{ matrix.wasm_name }}.wasm
+
+  commit-binaries:
+    name: Commit updated binaries
+    needs: build
+    # Only auto-commit on pushes to main, not on PRs
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Use the default GITHUB_TOKEN — write permission granted above
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          # Download all artifacts into a staging directory
+          path: _wasm_artifacts
+
+      - name: Move binaries into place
+        run: |
+          cp _wasm_artifacts/elgato_lights.wasm/elgato_lights.wasm plugin-elgato-lights/elgato_lights.wasm
+          cp _wasm_artifacts/ollama.wasm/ollama.wasm               plugin-ollama/ollama.wasm
+          cp _wasm_artifacts/roku_tv.wasm/roku_tv.wasm             plugin-roku-tv/roku_tv.wasm
+          cp _wasm_artifacts/zigbee2mqtt.wasm/zigbee2mqtt.wasm     plugin-zigbee2mqtt/zigbee2mqtt.wasm
+
+      - name: Commit if binaries changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add \
+            plugin-elgato-lights/elgato_lights.wasm \
+            plugin-ollama/ollama.wasm \
+            plugin-roku-tv/roku_tv.wasm \
+            plugin-zigbee2mqtt/zigbee2mqtt.wasm
+          if git diff --cached --quiet; then
+            echo "No binary changes — skipping commit."
+          else
+            git commit -m "chore: rebuild WASM plugin binaries [skip ci]"
+            git push
+          fi
