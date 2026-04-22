@@ -1,4 +1,6 @@
 name: Build WASM plugins
+# NOTE: plugin-zigbee2mqtt is an IPC (native binary) adapter, not a WASM plugin.
+# Its release is handled by release-ipc-adapters.yml.
 
 on:
   push:
@@ -35,10 +37,6 @@ jobs:
           - plugin: plugin-roku-tv
             wasm_name: roku_tv
             crate_name: plugin_roku_tv_wasm
-          - plugin: plugin-zigbee2mqtt
-            wasm_name: zigbee2mqtt
-            crate_name: plugin_zigbee2mqtt_wasm
-
     steps:
       - uses: actions/checkout@v4
 
@@ -98,7 +96,6 @@ jobs:
           cp _wasm_artifacts/elgato_lights.wasm/elgato_lights.wasm plugin-elgato-lights/elgato_lights.wasm
           cp _wasm_artifacts/ollama.wasm/ollama.wasm               plugin-ollama/ollama.wasm
           cp _wasm_artifacts/roku_tv.wasm/roku_tv.wasm             plugin-roku-tv/roku_tv.wasm
-          cp _wasm_artifacts/zigbee2mqtt.wasm/zigbee2mqtt.wasm     plugin-zigbee2mqtt/zigbee2mqtt.wasm
 
       - name: Commit if binaries changed
         run: |
@@ -107,8 +104,7 @@ jobs:
           git add \
             plugin-elgato-lights/elgato_lights.wasm \
             plugin-ollama/ollama.wasm \
-            plugin-roku-tv/roku_tv.wasm \
-            plugin-zigbee2mqtt/zigbee2mqtt.wasm
+            plugin-roku-tv/roku_tv.wasm
           if git diff --cached --quiet; then
             echo "No binary changes — skipping commit."
           else
