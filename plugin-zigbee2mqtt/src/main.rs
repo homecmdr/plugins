@@ -131,6 +131,9 @@ struct DeviceCommand {
     action: String,
     #[serde(default)]
     value: Option<Value>,
+    /// Hardware transition duration in seconds (Zigbee2MQTT `transition` field).
+    #[serde(default)]
+    transition_secs: Option<f64>,
 }
 
 // ---------------------------------------------------------------------------
@@ -560,7 +563,11 @@ fn build_mqtt_command(cmd: &DeviceCommand) -> Option<String> {
         ("brightness", "set") => {
             let pct = cmd.value.as_ref()?.as_f64()?;
             let raw = (pct / 100.0 * 254.0).round().min(254.0) as u64;
-            Some(format!(r#"{{"brightness":{raw}}}"#))
+            if let Some(secs) = cmd.transition_secs {
+                Some(format!(r#"{{"brightness":{raw},"transition":{secs}}}"#))
+            } else {
+                Some(format!(r#"{{"brightness":{raw}}}"#))
+            }
         }
         ("color_temperature", "set") => {
             let kelvin = cmd.value.as_ref()?.as_f64()?;
@@ -569,7 +576,11 @@ fn build_mqtt_command(cmd: &DeviceCommand) -> Option<String> {
             } else {
                 370 // ~2700 K
             };
-            Some(format!(r#"{{"color_temp":{mireds}}}"#))
+            if let Some(secs) = cmd.transition_secs {
+                Some(format!(r#"{{"color_temp":{mireds},"transition":{secs}}}"#))
+            } else {
+                Some(format!(r#"{{"color_temp":{mireds}}}"#))
+            }
         }
         _ => None,
     }
@@ -797,6 +808,7 @@ mod tests {
             capability: "power".to_string(),
             action: "on".to_string(),
             value: None,
+            transition_secs: None,
         };
         assert_eq!(build_mqtt_command(&cmd).as_deref(), Some(r#"{"state":"ON"}"#));
     }
@@ -807,10 +819,38 @@ mod tests {
             capability: "brightness".to_string(),
             action: "set".to_string(),
             value: Some(serde_json::json!(50.0)),
+            transition_secs: None,
         };
         assert_eq!(
             build_mqtt_command(&cmd).as_deref(),
             Some(r#"{"brightness":127}"#)
         );
+    }
+
+    #[test]
+    fn mqtt_command_brightness_set_with_transition() {
+        let cmd = DeviceCommand {
+            capability: "brightness".to_string(),
+            action: "set".to_string(),
+            value: Some(serde_json::json!(70.0)),
+            transition_secs: Some(30.0),
+        };
+        assert_eq!(
+            build_mqtt_command(&cmd).as_deref(),
+            Some(r#"{"brightness":178,"transition":30}"#)
+        );
+    }
+
+    #[test]
+    fn mqtt_command_color_temp_with_transition() {
+        let cmd = DeviceCommand {
+            capability: "color_temperature".to_string(),
+            action: "set".to_string(),
+            value: Some(serde_json::json!(2700.0)),
+            transition_secs: Some(10.0),
+        };
+        let result = build_mqtt_command(&cmd).unwrap();
+        assert!(result.contains("\"transition\":10"), "got: {result}");
+        assert!(result.contains("\"color_temp\":"), "got: {result}");
     }
 }

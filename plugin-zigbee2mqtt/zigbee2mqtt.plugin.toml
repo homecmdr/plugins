@@ -1,6 +1,6 @@
 [plugin]
 name         = "zigbee2mqtt"
-version      = "0.2.1"
+version      = "0.2.2"
 description  = "Connects to Zigbee2MQTT via MQTT, providing real-time device state and command dispatch."
 api_version  = "0.1.0"
 adapter_type = "ipc"
