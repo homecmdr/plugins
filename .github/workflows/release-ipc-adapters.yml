@@ -1,0 +1,148 @@
+name: Release IPC adapters
+
+# Triggered by a tag of the form  <plugin-name>-v<semver>
+# e.g.  plugin-zigbee2mqtt-v0.2.0
+#
+# To release a new version of an IPC adapter:
+#   git tag plugin-zigbee2mqtt-v0.2.1 && git push origin plugin-zigbee2mqtt-v0.2.1
+#
+# The workflow builds the native binary for x86_64 and aarch64 on their
+# respective native GitHub-hosted runners (no cross-compilation toolchain
+# needed) and uploads the resulting assets to a GitHub Release tagged with
+# the same tag name.
+#
+# The homecmdr CLI downloads IPC binaries from the release assets using this
+# URL pattern:
+#   https://github.com/homecmdr/plugins/releases/download/<tag>/<binary_name>-<arch>-linux
+#
+# ── Adding a new IPC adapter ──────────────────────────────────────────────────
+# 1. Add an entry to the matrix below with the correct plugin_dir and
+#    binary_name values.
+# 2. Add the new tag pattern to the `on.push.tags` list.
+# 3. Tag the first release:  git tag plugin-<name>-v0.1.0 && git push origin ...
+
+on:
+  push:
+    tags:
+      - 'plugin-zigbee2mqtt-v*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build ${{ matrix.binary_name }} (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64, aarch64]
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve adapter metadata from tag
+        id: meta
+        shell: bash
+        run: |
+          TAG="${{ github.ref_name }}"   # e.g. plugin-zigbee2mqtt-v0.2.0
+
+          # Derive plugin directory from the tag prefix (strip the trailing -v<ver>).
+          PLUGIN_DIR="${TAG%-v*}"        # plugin-zigbee2mqtt
+
+          case "$PLUGIN_DIR" in
+            plugin-zigbee2mqtt)
+              BINARY_NAME="zigbee2mqtt-adapter"
+              ;;
+            *)
+              echo "Unknown plugin '$PLUGIN_DIR' — cannot determine binary name."
+              exit 1
+              ;;
+          esac
+
+          echo "plugin_dir=$PLUGIN_DIR"   >> "$GITHUB_OUTPUT"
+          echo "binary_name=$BINARY_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles(format('{0}/Cargo.toml', steps.meta.outputs.plugin_dir)) }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.target }}-cargo-
+
+      - name: Build
+        working-directory: ${{ steps.meta.outputs.plugin_dir }}
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Prepare binary
+        shell: bash
+        run: |
+          PLUGIN_DIR="${{ steps.meta.outputs.plugin_dir }}"
+          BINARY_NAME="${{ steps.meta.outputs.binary_name }}"
+          ARCH="${{ matrix.arch }}"
+          TARGET="${{ matrix.target }}"
+
+          cp "${PLUGIN_DIR}/target/${TARGET}/release/${BINARY_NAME}" \
+             "${BINARY_NAME}-${ARCH}-linux"
+
+          echo "Asset: ${BINARY_NAME}-${ARCH}-linux"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.binary_name }}-${{ matrix.arch }}-linux
+          path: ${{ steps.meta.outputs.binary_name }}-${{ matrix.arch }}-linux
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: binaries
+          merge-multiple: true
+
+      - name: List assets
+        run: ls -lh binaries/
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.ref_name }}"
+          if gh release view "$TAG" --repo "${{ github.repository }}" > /dev/null 2>&1; then
+            echo "Release $TAG already exists — uploading assets..."
+            gh release upload "$TAG" binaries/* \
+              --repo "${{ github.repository }}" \
+              --clobber
+          else
+            echo "Creating release $TAG..."
+            gh release create "$TAG" \
+              binaries/* \
+              --repo "${{ github.repository }}" \
+              --title "$TAG" \
+              --generate-notes \
+              --target main
+          fi
