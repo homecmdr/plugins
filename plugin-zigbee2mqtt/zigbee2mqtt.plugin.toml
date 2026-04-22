@@ -1,22 +1,55 @@
 [plugin]
-name        = "zigbee2mqtt"
-version     = "0.1.0"
-description = "Polls Zigbee2MQTT for device state via the built-in HTTP API."
-api_version = "0.1.0"
-
-[runtime]
-poll_interval_secs = 30
+name         = "zigbee2mqtt"
+version      = "0.2.0"
+description  = "Connects to Zigbee2MQTT via MQTT, providing real-time device state and command dispatch."
+api_version  = "0.1.0"
+adapter_type = "ipc"
+binary       = "zigbee2mqtt-adapter"
 
 # ── CLI configuration prompts ─────────────────────────────────────────────────
-# The [plugin] and [runtime] sections above are read by the WASM host.
+# The [plugin] section above is read by the IPC host.
 # The [[config.fields]] sections below are used only by `homecmdr plugin add`
 # to prompt the user for adapter config values; the host ignores them.
 
 [[config.fields]]
-key         = "base_url"
+key         = "mqtt_host"
 type        = "string"
-description = "HTTP base URL of the Zigbee2MQTT web frontend (not the MQTT broker)"
-default     = "http://127.0.0.1:8080"
+description = "MQTT broker hostname or IP address"
+default     = "127.0.0.1"
+required    = false
+optional    = false
+secret      = false
+
+[[config.fields]]
+key         = "mqtt_port"
+type        = "u64"
+description = "MQTT broker port"
+default     = "1883"
+required    = false
+optional    = false
+secret      = false
+
+[[config.fields]]
+key         = "mqtt_username"
+type        = "string"
+description = "MQTT username (leave blank if broker requires no auth)"
+required    = false
+optional    = true
+secret      = false
+
+[[config.fields]]
+key         = "mqtt_password"
+type        = "string"
+description = "MQTT password"
+required    = false
+optional    = true
+secret      = true
+
+[[config.fields]]
+key         = "base_topic"
+type        = "string"
+description = "Zigbee2MQTT base MQTT topic"
+default     = "zigbee2mqtt"
 required    = false
 optional    = false
 secret      = false

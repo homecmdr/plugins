@@ -1,21 +1,27 @@
 [workspace]
-# This crate is intentionally outside any workspace.
-# Build target: wasm32-wasip2 (set in .cargo/config.toml)
+# Standalone native binary — not part of the homecmdr-api workspace.
 
 [package]
-name = "plugin-zigbee2mqtt-wasm"
-version = "0.1.0"
+name    = "zigbee2mqtt-adapter"
+version = "0.2.0"
 edition = "2021"
 
-[lib]
-crate-type = ["cdylib"]
+[[bin]]
+name = "zigbee2mqtt-adapter"
+path = "src/main.rs"
 
 [dependencies]
-wit-bindgen  = "0.57.1"
-serde        = { version = "1", features = ["derive"] }
-serde_json   = "1"
+anyhow           = "1"
+futures-util     = { version = "0.3", default-features = false, features = ["sink", "std"] }
+reqwest          = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+rumqttc          = "0.24"
+serde            = { version = "1", features = ["derive"] }
+serde_json       = "1"
+tokio            = { version = "1", features = ["full"] }
+tokio-tungstenite = { version = "0.23", features = ["rustls-tls-native-roots"] }
+tracing          = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [profile.release]
-opt-level     = "z"
-lto           = true
-codegen-units = 1
+opt-level = 3
+lto       = true
