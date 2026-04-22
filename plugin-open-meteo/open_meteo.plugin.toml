@@ -6,3 +6,26 @@ api_version = "0.1.0"
 
 [runtime]
 poll_interval_secs = 300
+
+# ── CLI configuration prompts ─────────────────────────────────────────────────
+# The [plugin] and [runtime] sections above are read by the WASM host.
+# The [[config.fields]] sections below are used only by `homecmdr plugin add`
+# to prompt the user for adapter config values; the host ignores them.
+
+[[config.fields]]
+key         = "latitude"
+type        = "f64"
+description = "Latitude"
+default     = "51.5"
+required    = false
+optional    = false
+secret      = false
+
+[[config.fields]]
+key         = "longitude"
+type        = "f64"
+description = "Longitude"
+default     = "-0.1"
+required    = false
+optional    = false
+secret      = false
