@@ -1,0 +1,40 @@
+# HomeCmdr Official Plugin Registry
+#
+# Consumed by `homecmdr plugin add` and `homecmdr plugin list`.
+# Each [[plugins]] entry describes one installable plugin.
+#
+# Fields:
+#   name         — canonical plugin name (must match directory and plugin-*.wasm stem)
+#   path         — path within this repo to the directory containing
+#                  <adapter>.wasm and <adapter>.plugin.toml
+#   display_name — human-readable name shown to the user
+#   description  — one-line summary
+#   version      — semver string
+
+[[plugins]]
+name         = "plugin-elgato-lights"
+path         = "plugin-elgato-lights"
+display_name = "Elgato Key Light"
+description  = "Controls Elgato Key Light and Key Light Air devices via the Control Center companion app."
+version      = "0.1.0"
+
+[[plugins]]
+name         = "plugin-ollama"
+path         = "plugin-ollama"
+display_name = "Ollama"
+description  = "Polls a local Ollama instance for available models and service health."
+version      = "0.1.0"
+
+[[plugins]]
+name         = "plugin-roku-tv"
+path         = "plugin-roku-tv"
+display_name = "Roku TV"
+description  = "Polls Roku streaming devices and Roku TVs via the External Control Protocol (ECP)."
+version      = "0.1.0"
+
+[[plugins]]
+name         = "plugin-zigbee2mqtt"
+path         = "plugin-zigbee2mqtt"
+display_name = "Zigbee2MQTT"
+description  = "Polls Zigbee2MQTT for device state via the built-in HTTP API."
+version      = "0.1.0"

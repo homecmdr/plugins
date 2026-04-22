@@ -1,0 +1,22 @@
+[plugin]
+name        = "ollama"
+version     = "0.1.0"
+description = "Polls a local Ollama instance for available models and service health."
+api_version = "0.1.0"
+
+[runtime]
+poll_interval_secs = 60
+
+# ── CLI configuration prompts ─────────────────────────────────────────────────
+# The [plugin] and [runtime] sections above are read by the WASM host.
+# The [[config.fields]] sections below are used only by `homecmdr plugin add`
+# to prompt the user for adapter config values; the host ignores them.
+
+[[config.fields]]
+key         = "base_url"
+type        = "string"
+description = "Base URL of the Ollama server"
+default     = "http://127.0.0.1:11434"
+required    = false
+optional    = false
+secret      = false

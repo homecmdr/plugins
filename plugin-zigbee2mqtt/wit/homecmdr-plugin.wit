@@ -1,0 +1,72 @@
+package homecmdr:plugin@0.1.0;
+
+/// A device state update returned by poll().
+interface types {
+    /// Vendor-scoped device update (adapter name prefix is added by the host).
+    record device-update {
+        /// ID fragment after the adapter name, e.g. "temperature_outdoor".
+        vendor-id: string,
+        /// "sensor" | "light" | "switch" | "virtual"
+        kind: string,
+        /// JSON-encoded map<string, AttributeValue> matching homecmdr-core model.
+        attributes-json: string,
+    }
+
+    /// Result from handling a device command.
+    record command-result {
+        /// true  = command was applied (or at least recognised).
+        /// false = this plugin does not own the target device.
+        handled: bool,
+        /// Non-empty when the command was recognised but execution failed.
+        error: option<string>,
+    }
+}
+
+/// HTTP utilities supplied by the HomeCmdr host.
+interface host-http {
+    /// Perform a plain GET request and return the response body as UTF-8.
+    get: func(url: string) -> result<string, string>;
+
+    /// Perform a POST request with `body` as the request body.
+    /// `content-type` is passed verbatim as the Content-Type header
+    /// (e.g. "application/json").
+    post: func(url: string, content-type: string, body: string) -> result<string, string>;
+
+    /// Perform a PUT request with `body` as the request body.
+    /// `content-type` is passed verbatim as the Content-Type header
+    /// (e.g. "application/json").
+    put: func(url: string, content-type: string, body: string) -> result<string, string>;
+}
+
+/// Structured logging routed through the host's tracing subscriber.
+interface host-log {
+    /// level: "error" | "warn" | "info" | "debug" | "trace"
+    log: func(level: string, message: string);
+}
+
+/// Functions that every HomeCmdr plugin must export.
+interface plugin {
+    use types.{device-update, command-result};
+
+    /// The plugin's unique name.  Must match the [adapters.<name>] key in config.
+    name: func() -> string;
+
+    /// Initialise the plugin.  config-json is the raw JSON object from
+    /// config [adapters.<name>].  Return an error string to abort loading.
+    init: func(config-json: string) -> result<_, string>;
+
+    /// Poll for current device state.  Called by the host on the configured
+    /// interval; the plugin is responsible for any HTTP calls via host-http.
+    poll: func() -> result<list<device-update>, string>;
+
+    /// Handle a device command.  device-id includes the adapter name prefix.
+    /// command-json is a JSON-encoded DeviceCommand.
+    command: func(device-id: string, command-json: string) -> result<command-result, string>;
+}
+
+/// The world every HomeCmdr WASM plugin component must satisfy.
+world adapter {
+    import host-http;
+    import host-log;
+    export plugin;
+}

@@ -1,0 +1,22 @@
+[plugin]
+name        = "elgato_lights"
+version     = "0.1.0"
+description = "Controls Elgato Key Light and Key Light Air devices via the Control Center companion app HTTP API."
+api_version = "0.1.0"
+
+[runtime]
+poll_interval_secs = 30
+
+# ── CLI configuration prompts ─────────────────────────────────────────────────
+# The [plugin] and [runtime] sections above are read by the WASM host.
+# The [[config.fields]] sections below are used only by `homecmdr plugin add`
+# to prompt the user for adapter config values; the host ignores them.
+
+[[config.fields]]
+key         = "base_url"
+type        = "string"
+description = "Base URL of the Elgato Control Center companion app"
+default     = "http://127.0.0.1:9123"
+required    = false
+optional    = false
+secret      = false
