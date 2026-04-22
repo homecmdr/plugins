@@ -226,6 +226,9 @@ async fn run_mqtt(
     let mut mqttopts = MqttOptions::new("homecmdr-zigbee2mqtt", &mqtt_host, mqtt_port);
     mqttopts.set_keep_alive(Duration::from_secs(30));
     mqttopts.set_clean_session(true);
+    // bridge/devices payloads can exceed the rumqttc default (10 KB).
+    // 10 MB is generous but safe for large Zigbee networks.
+    mqttopts.set_max_packet_size(10 * 1024 * 1024, 10 * 1024 * 1024);
     if let (Some(user), Some(pass)) = (mqtt_username, mqtt_password) {
         mqttopts.set_credentials(user, pass);
     }
@@ -632,7 +635,10 @@ fn build_attributes(
                     Value::Bool(b) => *b,
                     _ => false,
                 };
-                attrs.insert("power".to_string(), Value::Bool(on));
+                attrs.insert(
+                    "power".to_string(),
+                    Value::String(if on { "on" } else { "off" }.to_string()),
+                );
             }
             "brightness" => {
                 if let Some(raw) = value.as_f64() {
@@ -758,7 +764,7 @@ mod tests {
         let mut s = HashMap::new();
         s.insert("state".to_string(), serde_json::json!("ON"));
         let attrs = build_attributes(&s, &None);
-        assert_eq!(attrs["power"], serde_json::json!(true));
+        assert_eq!(attrs["power"], serde_json::json!("on"));
     }
 
     #[test]
@@ -766,7 +772,7 @@ mod tests {
         let mut s = HashMap::new();
         s.insert("state".to_string(), serde_json::json!("OFF"));
         let attrs = build_attributes(&s, &None);
-        assert_eq!(attrs["power"], serde_json::json!(false));
+        assert_eq!(attrs["power"], serde_json::json!("off"));
     }
 
     #[test]
