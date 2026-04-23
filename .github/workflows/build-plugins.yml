@@ -37,6 +37,9 @@ jobs:
           - plugin: plugin-roku-tv
             wasm_name: roku_tv
             crate_name: plugin_roku_tv_wasm
+          - plugin: plugin-open-meteo
+            wasm_name: open_meteo
+            crate_name: plugin_open_meteo_wasm
     steps:
       - uses: actions/checkout@v4
 
@@ -96,6 +99,7 @@ jobs:
           cp _wasm_artifacts/elgato_lights.wasm/elgato_lights.wasm plugin-elgato-lights/elgato_lights.wasm
           cp _wasm_artifacts/ollama.wasm/ollama.wasm               plugin-ollama/ollama.wasm
           cp _wasm_artifacts/roku_tv.wasm/roku_tv.wasm             plugin-roku-tv/roku_tv.wasm
+          cp _wasm_artifacts/open_meteo.wasm/open_meteo.wasm       plugin-open-meteo/open_meteo.wasm
 
       - name: Commit if binaries changed
         run: |
@@ -104,7 +108,8 @@ jobs:
           git add \
             plugin-elgato-lights/elgato_lights.wasm \
             plugin-ollama/ollama.wasm \
-            plugin-roku-tv/roku_tv.wasm
+            plugin-roku-tv/roku_tv.wasm \
+            plugin-open-meteo/open_meteo.wasm
           if git diff --cached --quiet; then
             echo "No binary changes — skipping commit."
           else
