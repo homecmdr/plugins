@@ -1,17 +1,12 @@
 //! Elgato Key Light WASM plugin for HomeCmdr.
 //!
-//! Controls Elgato Key Light and Key Light Air devices via the Elgato
-//! Control Center companion app HTTP API (default port 9123).
+//! Controls Elgato Key Light and Key Light Air devices directly
+//! via HTTP API (default port 9123).
 //!
 //! Capabilities:
 //!   - power   (on/off/toggle)
 //!   - brightness (0–100)
 //!   - color_temperature (kelvin)
-//!
-//! Build:
-//!   cargo build --release
-//!   cp target/wasm32-wasip2/release/plugin_elgato_lights_wasm.wasm \
-//!      <workspace>/config/plugins/elgato_lights.wasm
 
 wit_bindgen::generate!({
     world: "adapter",
@@ -117,9 +112,9 @@ impl Guest for ElgatoLightsPlugin {
             let kelvin = mired_to_kelvin(light.temperature);
 
             let attrs = serde_json::json!({
-                "power": on,
+                "power": if on { "on" } else { "off" },
                 "brightness": light.brightness as i64,
-                "color_temperature": kelvin as i64,
+                "color_temperature": { "value": kelvin as i64, "unit": "kelvin" },
             })
             .to_string();
 
