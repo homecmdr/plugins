@@ -1,0 +1,40 @@
+[plugin]
+# TODO: set the canonical plugin name.  Must match the [adapters.<name>] key
+#       in the HomeCmdr config and the prefix used in device IDs.
+name        = "my_plugin"
+version     = "0.1.0"
+description = "TODO: one-line description of what this plugin does."
+api_version = "0.1.0"
+
+[runtime]
+# How often HomeCmdr calls poll() on this plugin (in seconds).
+# TODO: tune to match the update frequency of the device or service.
+poll_interval_secs = 30
+
+# ── CLI configuration prompts ─────────────────────────────────────────────────
+# [[config.fields]] entries are used by `homecmdr plugin add` to prompt the
+# user for adapter config values.  The runtime host ignores them — only the
+# values the user enters (stored under [adapters.my_plugin] in config) matter.
+#
+# Supported field types: "string" | "u64" | "bool"
+# secret = true  → value is masked in the terminal during prompts
+# optional = true → field is skipped when the user leaves it blank
+
+[[config.fields]]
+key         = "base_url"
+type        = "string"
+description = "Base URL of the device or service API"
+default     = "http://127.0.0.1:8080"
+required    = false
+optional    = false
+secret      = false
+
+# TODO: add more fields as needed.  Example of a required secret:
+#
+# [[config.fields]]
+# key         = "api_key"
+# type        = "string"
+# description = "API key for authenticating with the service"
+# required    = true
+# optional    = false
+# secret      = true

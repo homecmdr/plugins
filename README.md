@@ -166,6 +166,42 @@ Standard state fields are mapped to canonical HomeCmdr attribute keys:
 
 ## Developing a plugin
 
+### Starter templates
+
+Two ready-to-copy templates live in this repository:
+
+| Directory | Use when… |
+|-----------|-----------|
+| [`template-wasm/`](template-wasm/) | Your plugin polls an HTTP API on a fixed interval and/or handles simple commands. Compiled to WebAssembly; sandboxed; easiest to deploy. |
+| [`template-ipc/`](template-ipc/) | Your plugin needs persistent connections (MQTT, WebSocket, serial, etc.) or event-driven I/O. Compiled to a native binary; full OS access. |
+
+**Quick start (WASM):**
+
+```bash
+cp -r template-wasm plugin-my-plugin
+cd plugin-my-plugin
+# Edit Cargo.toml, my_plugin.plugin.toml, and src/lib.rs
+# (search for TODO comments — every placeholder is marked)
+cargo build --release
+cp target/wasm32-wasip2/release/plugin_my_plugin_wasm.wasm \
+   <homecmdr-api>/config/plugins/my_plugin.wasm
+cp my_plugin.plugin.toml \
+   <homecmdr-api>/config/plugins/my_plugin.plugin.toml
+```
+
+**Quick start (IPC):**
+
+```bash
+cp -r template-ipc plugin-my-plugin
+cd plugin-my-plugin
+# Edit Cargo.toml, my_plugin.plugin.toml, and src/main.rs
+cargo build --release
+cp target/release/my-plugin-adapter \
+   <homecmdr-api>/config/plugins/my-plugin-adapter
+cp my_plugin.plugin.toml \
+   <homecmdr-api>/config/plugins/my_plugin.plugin.toml
+```
+
 See the [Plugin Authoring Guide](https://github.com/homecmdr/homecmdr-api/blob/main/config/docs/plugin_authoring_guide.md)
 in the API repo for the full workflow: WIT interface, Cargo.toml setup, build
 instructions, and deployment.

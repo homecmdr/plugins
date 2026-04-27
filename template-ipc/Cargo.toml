@@ -1,0 +1,31 @@
+[workspace]
+# Standalone native binary — not part of the homecmdr-api workspace.
+
+# TODO: rename "my-plugin-adapter" to match your plugin name,
+#       e.g. "weather-station-adapter"
+[package]
+name    = "my-plugin-adapter"
+version = "0.1.0"
+edition = "2021"
+
+# TODO: rename the binary to match your plugin name.
+[[bin]]
+name = "my-plugin-adapter"
+path = "src/main.rs"
+
+[dependencies]
+anyhow           = "1"
+futures-util     = { version = "0.3", default-features = false, features = ["sink", "std"] }
+reqwest          = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde            = { version = "1", features = ["derive"] }
+serde_json       = "1"
+tokio            = { version = "1", features = ["full"] }
+tokio-tungstenite = { version = "0.23", features = ["rustls-tls-native-roots"] }
+tracing          = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+# Add any protocol-specific crates here (e.g. rumqttc for MQTT,
+# serialport for serial, a vendor SDK, etc.).
+
+[profile.release]
+opt-level = 3
+lto       = true

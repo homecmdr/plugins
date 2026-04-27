@@ -1,0 +1,29 @@
+[workspace]
+# This crate is intentionally outside any workspace.
+# Build target: wasm32-wasip2 (set in .cargo/config.toml)
+
+# TODO: rename "plugin-my-plugin-wasm" to match your plugin name,
+#       e.g. "plugin-weather-station-wasm"
+[package]
+name    = "plugin-my-plugin-wasm"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+# Required: WASM component plugins must be compiled as a cdylib.
+crate-type = ["cdylib"]
+
+[dependencies]
+wit-bindgen = "0.57.1"
+serde       = { version = "1", features = ["derive"] }
+serde_json  = "1"
+# Add any other dependencies your plugin needs here.
+# Avoid crates that rely on system APIs unavailable in WASM
+# (threads, file I/O, network sockets, etc.).  Use host_http for
+# all network requests.
+
+[profile.release]
+# Size-optimised release build — keeps the .wasm binary small.
+opt-level     = "z"
+lto           = true
+codegen-units = 1
