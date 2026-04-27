@@ -617,16 +617,69 @@ fn build_mqtt_command(cmd: &DeviceCommand) -> Option<String> {
             }
         }
         ("color_temperature", "set") => {
-            let kelvin = cmd.value.as_ref()?.as_f64()?;
-            let mireds = if kelvin > 0.0 {
-                (1_000_000.0 / kelvin).round() as u64
+            // Value arrives as either a plain number (legacy) or a
+            // Measurement object {"value": <kelvin>, "unit": "kelvin"/"mireds"}.
+            let v = cmd.value.as_ref()?;
+            let (kelvin, mireds_override) = if let Some(obj) = v.as_object() {
+                let raw = obj.get("value")?.as_f64()?;
+                let unit = obj.get("unit").and_then(|u| u.as_str()).unwrap_or("kelvin");
+                if unit == "mireds" {
+                    // Already mireds — use directly.
+                    let mireds = raw.round() as u64;
+                    let k = if raw > 0.0 { 1_000_000.0 / raw } else { 0.0 };
+                    (k, Some(mireds))
+                } else {
+                    (raw, None)
+                }
             } else {
-                370 // ~2700 K
+                (v.as_f64()?, None)
             };
+            let mireds = mireds_override.unwrap_or_else(|| {
+                if kelvin > 0.0 {
+                    (1_000_000.0 / kelvin).round() as u64
+                } else {
+                    370 // ~2700 K
+                }
+            });
             if let Some(secs) = cmd.transition_secs {
                 Some(format!(r#"{{"color_temp":{mireds},"transition":{secs}}}"#))
             } else {
                 Some(format!(r#"{{"color_temp":{mireds}}}"#))
+            }
+        }
+        ("color_xy", "set") => {
+            let obj = cmd.value.as_ref()?.as_object()?;
+            let x = obj.get("x")?.as_f64()?;
+            let y = obj.get("y")?.as_f64()?;
+            if let Some(secs) = cmd.transition_secs {
+                Some(format!(r#"{{"color":{{"x":{x},"y":{y}}},"transition":{secs}}}"#))
+            } else {
+                Some(format!(r#"{{"color":{{"x":{x},"y":{y}}}}}"#))
+            }
+        }
+        ("color_hs", "set") => {
+            let obj = cmd.value.as_ref()?.as_object()?;
+            let hue = obj.get("hue")?.as_i64()?;
+            let sat = obj.get("saturation")?.as_i64()?;
+            if let Some(secs) = cmd.transition_secs {
+                Some(format!(
+                    r#"{{"color":{{"hue":{hue},"saturation":{sat}}},"transition":{secs}}}"#
+                ))
+            } else {
+                Some(format!(r#"{{"color":{{"hue":{hue},"saturation":{sat}}}}}"#))
+            }
+        }
+        ("color_rgb", "set") => {
+            let obj = cmd.value.as_ref()?.as_object()?;
+            let r = obj.get("r")?.as_i64()?;
+            let g = obj.get("g")?.as_i64()?;
+            let b = obj.get("b")?.as_i64()?;
+            if let Some(secs) = cmd.transition_secs {
+                Some(format!(
+                    r#"{{"color":{{"r":{r},"g":{g},"b":{b}}},"transition":{secs}}}"#
+                ))
+            } else {
+                Some(format!(r#"{{"color":{{"r":{r},"g":{g},"b":{b}}}}}"#))
             }
         }
         _ => None,
@@ -726,16 +779,17 @@ fn build_attributes(
                 }
             }
             "color_mode" => {
-                // Z2M uses "color_temperature"; canonical is "color_temp".
-                let mapped = match value.as_str().unwrap_or("") {
-                    "color_temperature" => "color_temp",
-                    other => other,
-                };
-                attrs.insert("color_mode".to_string(), Value::String(mapped.to_string()));
+                // Deliberately discarded. Z2M's color_mode merely reflects the type
+                // of the last command sent (xy/hs/color_temp) — it is not a device
+                // capability descriptor and is misleading as API state.
             }
             "color" => {
-                // Z2M sends { x, y } for XY mode or { hue, saturation } for HS mode.
+                // Z2M sometimes sends all representations simultaneously, e.g.:
+                // { "x": 0.5056, "y": 0.4152, "hue": 27, "saturation": 92 }
+                // Use independent `if` blocks (not `else if`) so every sub-format
+                // present in the object is mapped — none are silently dropped.
                 if let Value::Object(obj) = value {
+                    let mut mapped = false;
                     if obj.contains_key("x") && obj.contains_key("y") {
                         attrs.insert(
                             "color_xy".to_string(),
@@ -744,7 +798,9 @@ fn build_attributes(
                                 "y": obj.get("y").and_then(|v| v.as_f64()).unwrap_or(0.0),
                             }),
                         );
-                    } else if obj.contains_key("hue") && obj.contains_key("saturation") {
+                        mapped = true;
+                    }
+                    if obj.contains_key("hue") && obj.contains_key("saturation") {
                         attrs.insert(
                             "color_hs".to_string(),
                             serde_json::json!({
@@ -752,7 +808,9 @@ fn build_attributes(
                                 "saturation": obj.get("saturation").and_then(|v| v.as_i64()).unwrap_or(0),
                             }),
                         );
-                    } else {
+                        mapped = true;
+                    }
+                    if !mapped {
                         attrs.insert(format!("custom.zigbee2mqtt.{key}"), value.clone());
                     }
                 } else {
