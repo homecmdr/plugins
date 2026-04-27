@@ -604,9 +604,9 @@ async fn dispatch_command(
 /// caller will log a debug message and skip the publish.
 fn build_mqtt_command(cmd: &DeviceCommand) -> Option<String> {
     match (cmd.capability.as_str(), cmd.action.as_str()) {
-        ("power", "on") => Some(r#"{"state":"ON"}"#.to_string()),
-        ("power", "off") => Some(r#"{"state":"OFF"}"#.to_string()),
-        ("power", "toggle") => Some(r#"{"state":"TOGGLE"}"#.to_string()),
+        ("state", "on") => Some(r#"{"state":"ON"}"#.to_string()),
+        ("state", "off") => Some(r#"{"state":"OFF"}"#.to_string()),
+        ("state", "toggle") => Some(r#"{"state":"TOGGLE"}"#.to_string()),
         ("brightness", "set") => {
             let pct = cmd.value.as_ref()?.as_f64()?;
             let raw = (pct / 100.0 * 254.0).round().min(254.0) as u64;
@@ -747,7 +747,7 @@ fn build_attributes(
     // Map known state fields to canonical HomeCmdr attribute keys.
     for (key, value) in state {
         match key.as_str() {
-            // ── Power ──────────────────────────────────────────────────────
+            // ── On/Off state ───────────────────────────────────────────────
             "state" => {
                 let on = match value {
                     Value::String(s) => s.eq_ignore_ascii_case("ON"),
@@ -755,7 +755,7 @@ fn build_attributes(
                     _ => false,
                 };
                 attrs.insert(
-                    "power".to_string(),
+                    "state".to_string(),
                     Value::String(if on { "on" } else { "off" }.to_string()),
                 );
             }
@@ -1041,20 +1041,20 @@ mod tests {
         assert_eq!(infer_kind(&Some(def)), "sensor");
     }
 
-    // ── Power ─────────────────────────────────────────────────────────────────
+    // ── On/Off state ──────────────────────────────────────────────────────────
 
     #[test]
-    fn power_state_on() {
+    fn state_on() {
         let mut s = HashMap::new();
         s.insert("state".to_string(), serde_json::json!("ON"));
-        assert_eq!(attrs(&s)["power"], serde_json::json!("on"));
+        assert_eq!(attrs(&s)["state"], serde_json::json!("on"));
     }
 
     #[test]
-    fn power_state_off() {
+    fn state_off() {
         let mut s = HashMap::new();
         s.insert("state".to_string(), serde_json::json!("OFF"));
-        assert_eq!(attrs(&s)["power"], serde_json::json!("off"));
+        assert_eq!(attrs(&s)["state"], serde_json::json!("off"));
     }
 
     // ── Lighting ──────────────────────────────────────────────────────────────
@@ -1317,9 +1317,9 @@ mod tests {
     // ── Commands ──────────────────────────────────────────────────────────────
 
     #[test]
-    fn mqtt_command_power_on() {
+    fn mqtt_command_state_on() {
         let cmd = DeviceCommand {
-            capability: "power".to_string(),
+            capability: "state".to_string(),
             action: "on".to_string(),
             value: None,
             transition_secs: None,

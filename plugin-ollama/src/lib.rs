@@ -163,7 +163,7 @@ impl Guest for OllamaPlugin {
             vendor_id: "service".to_string(),
             kind: "virtual".to_string(),
             attributes_json: serde_json::json!({
-                "power": true,
+                "state": "on",
                 "custom.ollama.model_count": model_count,
             })
             .to_string(),

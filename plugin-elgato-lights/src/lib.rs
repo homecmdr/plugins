@@ -4,7 +4,7 @@
 //! via HTTP API (default port 9123).
 //!
 //! Capabilities:
-//!   - power   (on/off/toggle)
+//!   - state  (on/off/toggle)
 //!   - brightness (0–100)
 //!   - color_temperature (kelvin)
 
@@ -112,7 +112,7 @@ impl Guest for ElgatoLightsPlugin {
             let kelvin = mired_to_kelvin(light.temperature);
 
             let attrs = serde_json::json!({
-                "power": if on { "on" } else { "off" },
+                "state": if on { "on" } else { "off" },
                 "brightness": light.brightness as i64,
                 "color_temperature": { "value": kelvin as i64, "unit": "kelvin" },
             })
@@ -159,9 +159,9 @@ impl Guest for ElgatoLightsPlugin {
             .ok_or_else(|| format!("light index {} out of range", light_index))?;
 
         match (cmd.capability.as_str(), cmd.action.as_str()) {
-            ("power", "on")     => light.on = 1,
-            ("power", "off")    => light.on = 0,
-            ("power", "toggle") => light.on = if light.on != 0 { 0 } else { 1 },
+            ("state", "on")     => light.on = 1,
+            ("state", "off")    => light.on = 0,
+            ("state", "toggle") => light.on = if light.on != 0 { 0 } else { 1 },
             ("brightness", "set") => {
                 let v = cmd.value.as_ref()
                     .and_then(|v| v.as_u64())

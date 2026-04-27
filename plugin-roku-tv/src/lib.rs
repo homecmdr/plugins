@@ -130,7 +130,7 @@ impl Guest for RokuTvPlugin {
         let active_app_id = xml_attr(&active_app_xml, "app", "id").unwrap_or_default();
 
         let attrs = serde_json::json!({
-            "power":                          if power_on { "on" } else { "off" },
+            "state":                          if power_on { "on" } else { "off" },
             "custom.roku_tv.model_name":      model_name,
             "custom.roku_tv.friendly_name":   friendly_name,
             "custom.roku_tv.serial_number":   serial,
@@ -165,9 +165,9 @@ impl Guest for RokuTvPlugin {
 
         // Map HomeCmdr capability/action to an ECP key name.
         let ecp_key = match (cmd.capability.as_str(), cmd.action.as_str()) {
-            ("power", "off")    => "PowerOff".to_string(),
-            ("power", "on")     => "PowerOn".to_string(),
-            ("power", "toggle") => "Power".to_string(),
+            ("state", "off")    => "PowerOff".to_string(),
+            ("state", "on")     => "PowerOn".to_string(),
+            ("state", "toggle") => "Power".to_string(),
             ("navigate", "home")     => "Home".to_string(),
             ("navigate", "back")     => "Back".to_string(),
             ("navigate", "select")   => "Select".to_string(),
