@@ -1,0 +1,45 @@
+[plugin]
+name         = "mqtt"
+version      = "0.1.0"
+description  = "Bridges any MQTT device (ESP32, Tasmota, ESPHome, etc.) to HomeCmdr. Supports JSON-payload and per-attribute topic modes."
+api_version  = "0.1.0"
+adapter_type = "ipc"
+binary       = "mqtt-adapter"
+
+# ── CLI configuration prompts ─────────────────────────────────────────────────
+# [[config.fields]] entries are used by `homecmdr plugin add` to prompt the
+# user for top-level adapter config values.  Per-device configuration
+# ([[adapters.mqtt.devices]] entries) must be added manually to your
+# config/local.toml after installation.
+
+[[config.fields]]
+key         = "mqtt_host"
+type        = "string"
+description = "MQTT broker hostname or IP address (e.g. 192.168.1.10)"
+required    = true
+optional    = false
+secret      = false
+
+[[config.fields]]
+key         = "mqtt_port"
+type        = "u64"
+description = "MQTT broker port (default 1883)"
+required    = false
+optional    = true
+secret      = false
+
+[[config.fields]]
+key         = "mqtt_username"
+type        = "string"
+description = "MQTT username (leave blank if not required)"
+required    = false
+optional    = true
+secret      = false
+
+[[config.fields]]
+key         = "mqtt_password"
+type        = "string"
+description = "MQTT password (leave blank if not required)"
+required    = false
+optional    = true
+secret      = true

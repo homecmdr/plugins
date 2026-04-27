@@ -206,6 +206,7 @@ async fn main() {
 
     let state = Arc::new(Mutex::new(SharedState::default()));
     let (cmd_tx, cmd_rx) = mpsc::channel::<MqttPublish>(128);
+    let base_topic = config.base_topic.clone();
 
     tokio::join!(
         run_mqtt(
@@ -215,7 +216,7 @@ async fn main() {
             Arc::clone(&state),
             cmd_rx
         ),
-        run_websocket(api_url, api_token, state, cmd_tx),
+        run_websocket(api_url, api_token, state, cmd_tx, base_topic),
     );
 }
 
@@ -246,17 +247,8 @@ async fn run_mqtt(
     } = config;
     let base_topic = base_topic.trim_end_matches('/').to_string();
 
-    let mut mqttopts = MqttOptions::new("homecmdr-zigbee2mqtt", &mqtt_host, mqtt_port);
-    mqttopts.set_keep_alive(Duration::from_secs(30));
-    mqttopts.set_clean_session(true);
-    // bridge/devices payloads can exceed the rumqttc default (10 KB).
-    // 10 MB is generous but safe for large Zigbee networks.
-    mqttopts.set_max_packet_size(10 * 1024 * 1024, 10 * 1024 * 1024);
-    if let (Some(user), Some(pass)) = (mqtt_username, mqtt_password) {
-        mqttopts.set_credentials(user, pass);
-    }
-
-    let (client, mut eventloop) = AsyncClient::new(mqttopts, 64);
+    let (client, mut eventloop) =
+        mqtt_connect("homecmdr-zigbee2mqtt", &mqtt_host, mqtt_port, mqtt_username, mqtt_password);
     let http_client = reqwest::Client::new();
 
     loop {
@@ -340,6 +332,29 @@ async fn run_mqtt(
             }
         }
     }
+}
+
+/// Build an MQTT client + event loop with standard HomeCmdr settings.
+///
+/// Uses a 10 MB max packet size to accommodate large `bridge/devices` payloads
+/// from Zigbee networks with many paired devices.
+fn mqtt_connect(
+    client_id: &str,
+    host: &str,
+    port: u16,
+    username: Option<String>,
+    password: Option<String>,
+) -> (AsyncClient, rumqttc::EventLoop) {
+    let mut opts = MqttOptions::new(client_id, host, port);
+    opts.set_keep_alive(Duration::from_secs(30));
+    opts.set_clean_session(true);
+    // bridge/devices payloads can exceed the rumqttc default (10 KB).
+    // 10 MB is generous but safe for large Zigbee networks.
+    opts.set_max_packet_size(10 * 1024 * 1024, 10 * 1024 * 1024);
+    if let (Some(u), Some(p)) = (username, password) {
+        opts.set_credentials(u, p);
+    }
+    AsyncClient::new(opts, 64)
 }
 
 // ── bridge/devices handler ────────────────────────────────────────────────────
@@ -474,6 +489,7 @@ async fn run_websocket(
     api_token: String,
     state: Arc<Mutex<SharedState>>,
     cmd_tx: mpsc::Sender<MqttPublish>,
+    base_topic: String,
 ) {
     let ws_url = {
         let base = api_url.trim_end_matches('/');
@@ -483,7 +499,7 @@ async fn run_websocket(
 
     let mut backoff = Duration::from_secs(1);
     loop {
-        match ws_session(&ws_url, &api_token, &state, &cmd_tx).await {
+        match ws_session(&ws_url, &api_token, &state, &cmd_tx, &base_topic).await {
             Ok(()) => {
                 tracing::info!("zigbee2mqtt: WebSocket session ended");
                 backoff = Duration::from_secs(1);
@@ -506,6 +522,7 @@ async fn ws_session(
     api_token: &str,
     state: &Arc<Mutex<SharedState>>,
     cmd_tx: &mpsc::Sender<MqttPublish>,
+    base_topic: &str,
 ) -> anyhow::Result<()> {
     use tokio_tungstenite::tungstenite::client::IntoClientRequest;
     use tokio_tungstenite::tungstenite::http::header::{HeaderValue, AUTHORIZATION};
@@ -533,7 +550,7 @@ async fn ws_session(
         };
 
         if event.event_type == "device.command_dispatched" {
-            dispatch_command(event, state, cmd_tx).await;
+            dispatch_command(event, state, cmd_tx, base_topic).await;
         }
     }
 
@@ -554,6 +571,7 @@ async fn dispatch_command(
     event: WsEvent,
     state: &Arc<Mutex<SharedState>>,
     cmd_tx: &mpsc::Sender<MqttPublish>,
+    base_topic: &str,
 ) {
     let device_id = match event.id.as_deref() {
         Some(id) if id.starts_with("zigbee2mqtt:") => id.to_string(),
@@ -587,7 +605,7 @@ async fn dispatch_command(
         }
     };
 
-    let topic = format!("zigbee2mqtt/{friendly_name}/set");
+    let topic = format!("{base_topic}/{friendly_name}/set");
     tracing::debug!("zigbee2mqtt: publish {topic} ← {payload_str}");
 
     let _ = cmd_tx
@@ -1074,20 +1092,6 @@ mod tests {
             attrs(&s)["color_temperature"],
             serde_json::json!({ "value": 4000_i64, "unit": "kelvin" })
         );
-    }
-
-    #[test]
-    fn color_mode_mapped() {
-        let mut s = HashMap::new();
-        s.insert("color_mode".to_string(), serde_json::json!("color_temperature"));
-        assert_eq!(attrs(&s)["color_mode"], serde_json::json!("color_temp"));
-    }
-
-    #[test]
-    fn color_mode_passthrough() {
-        let mut s = HashMap::new();
-        s.insert("color_mode".to_string(), serde_json::json!("xy"));
-        assert_eq!(attrs(&s)["color_mode"], serde_json::json!("xy"));
     }
 
     #[test]

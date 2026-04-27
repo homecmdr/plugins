@@ -47,3 +47,12 @@ description  = "Connects to Zigbee2MQTT via MQTT for real-time device state and 
 version      = "0.2.2"
 type         = "ipc"
 binary_name  = "zigbee2mqtt-adapter"
+
+[[plugins]]
+name         = "plugin-mqtt"
+path         = "plugin-mqtt"
+display_name = "Generic MQTT"
+description  = "Bridges any MQTT device (ESP32, Tasmota, ESPHome, etc.) to HomeCmdr. Supports JSON-payload and per-attribute topic modes."
+version      = "0.1.0"
+type         = "ipc"
+binary_name  = "mqtt-adapter"
